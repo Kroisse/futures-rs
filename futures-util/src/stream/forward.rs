@@ -1,7 +1,7 @@
 use crate::stream::{StreamExt, Fuse};
 use core::marker::Unpin;
 use core::pin::PinMut;
-use futures_core::future::Future;
+use futures_core::future::{FusedFuture, Future};
 use futures_core::stream::Stream;
 use futures_core::task::{self, Poll};
 use futures_sink::Sink;
@@ -37,12 +37,12 @@ where
     unsafe_unpinned!(buffered_item: Option<Si::SinkItem>);
 
     pub(super) fn new(stream: St, sink: Si) -> Forward<St, Si> {
-    Forward {
-        sink: Some(sink),
-        stream: stream.fuse(),
-            buffered_item: None,
+        Forward {
+            sink: Some(sink),
+            stream: stream.fuse(),
+                buffered_item: None,
+        }
     }
-}
 
     fn try_start_send(
         mut self: PinMut<Self>,
@@ -58,6 +58,12 @@ where
         }
         *self.buffered_item() = Some(item);
         Poll::Pending
+    }
+}
+
+impl<St: Stream, Si: Sink + Unpin> FusedFuture for Forward<St, Si> {
+    fn can_poll(&self) -> bool {
+        self.sink.is_some()
     }
 }
 

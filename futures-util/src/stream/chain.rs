@@ -1,5 +1,5 @@
 use core::pin::PinMut;
-use futures_core::stream::Stream;
+use futures_core::stream::{FusedStream, Stream};
 use futures_core::task::{self, Poll};
 use pin_utils::unsafe_pinned;
 
@@ -27,6 +27,12 @@ where St1: Stream,
             first: Some(stream1),
             second: stream2,
         }
+    }
+}
+
+impl<St1, St2: FusedStream> FusedStream for Chain<St1, St2> {
+    fn can_poll(&self) -> bool {
+        self.first.is_some() || self.second.can_poll()
     }
 }
 

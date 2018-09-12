@@ -1,6 +1,6 @@
 use core::marker::{PhantomData, Unpin};
 use core::pin::PinMut;
-use futures_core::future::{Future, TryFuture};
+use futures_core::future::{Future, FusedFuture, TryFuture};
 use futures_core::task::{self, Poll};
 use pin_utils::unsafe_pinned;
 
@@ -23,6 +23,10 @@ impl<Fut, E> ErrInto<Fut, E> {
             _marker: PhantomData,
         }
     }
+}
+
+impl<Fut: FusedFuture, E> FusedFuture for ErrInto<Fut, E> {
+    fn can_poll(&self) -> bool { self.future.can_poll() }
 }
 
 impl<Fut, E> Future for ErrInto<Fut, E>

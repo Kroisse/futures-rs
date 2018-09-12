@@ -1,6 +1,6 @@
 use core::marker::Unpin;
 use core::pin::PinMut;
-use futures_core::future::Future;
+use futures_core::future::{FusedFuture, Future};
 use futures_core::stream::Stream;
 use futures_core::task::{self, Poll};
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
@@ -36,6 +36,12 @@ where St: Stream,
             accum: Some(t),
             future: None,
         }
+    }
+}
+
+impl<St, Fut, T, F> FusedFuture for Fold<St, Fut, T, F> {
+    fn can_poll(&self) -> bool {
+        self.accum.is_some() || self.future.is_some()
     }
 }
 

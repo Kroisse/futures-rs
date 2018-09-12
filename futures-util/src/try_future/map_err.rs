@@ -1,6 +1,6 @@
 use core::marker::Unpin;
 use core::pin::PinMut;
-use futures_core::future::{Future, TryFuture};
+use futures_core::future::{Future, FusedFuture, TryFuture};
 use futures_core::task::{self, Poll};
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
@@ -23,6 +23,10 @@ impl<Fut, F> MapErr<Fut, F> {
 }
 
 impl<Fut: Unpin, F> Unpin for MapErr<Fut, F> {}
+
+impl<Fut, F> FusedFuture for MapErr<Fut, F> {
+    fn can_poll(&self) -> bool { self.f.is_some() }
+}
 
 impl<Fut, F, E> Future for MapErr<Fut, F>
     where Fut: TryFuture,

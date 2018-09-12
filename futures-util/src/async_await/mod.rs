@@ -6,6 +6,9 @@
 use core::marker::Unpin;
 use futures_core::future::Future;
 
+#[doc(hidden)]
+pub use futures_core::future::FusedFuture;
+
 #[macro_use]
 mod poll;
 pub use self::poll::*;
@@ -29,3 +32,7 @@ mod spawn;
 #[doc(hidden)]
 #[inline(always)]
 pub fn assert_unpin<T: Future + Unpin>(_: &T) {}
+
+#[doc(hidden)]
+#[inline(always)]
+pub fn assert_fused_future<T: Future + FusedFuture>(_: &T) {}

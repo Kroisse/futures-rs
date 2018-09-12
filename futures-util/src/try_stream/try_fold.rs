@@ -1,6 +1,6 @@
 use core::marker::Unpin;
 use core::pin::PinMut;
-use futures_core::future::{Future, TryFuture};
+use futures_core::future::{FusedFuture, Future, TryFuture};
 use futures_core::stream::TryStream;
 use futures_core::task::{self, Poll};
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
@@ -37,6 +37,12 @@ where St: TryStream,
     }
 }
 
+impl<St, Fut, T, F> FusedFuture for TryFold<St, Fut, T, F> {
+    fn can_poll(&self) -> bool {
+        self.accum.is_some() || self.future.is_some()
+    }
+}
+
 impl<St, Fut, T, F> Future for TryFold<St, Fut, T, F>
     where St: TryStream,
           F: FnMut(T, St::Ok) -> Fut,
@@ -48,14 +54,32 @@ impl<St, Fut, T, F> Future for TryFold<St, Fut, T, F>
         loop {
             // we're currently processing a future to produce a new accum value
             if self.accum().is_none() {
-                let accum = ready!(self.future().as_pin_mut().unwrap().try_poll(cx)?);
+                let accum = match ready!(
+                    self.future().as_pin_mut()
+                       .expect("TryFold polled after completion")
+                       .try_poll(cx)
+                ) {
+                    Ok(accum) => accum,
+                    Err(e) => {
+                        // Indicate that the future can no longer be polled.
+                        PinMut::set(self.future(), None);
+                        return Poll::Ready(Err(e));
+                    }
+                };
                 *self.accum() = Some(accum);
                 PinMut::set(self.future(), None);
             }
 
-            let item = ready!(self.stream().try_poll_next(cx)?);
-            let accum = self.accum().take()
-                .expect("TryFold polled after completion");
+            let item = match ready!(self.stream().try_poll_next(cx)) {
+                Some(Ok(item)) => Some(item),
+                Some(Err(e)) => {
+                    // Indicate that the future can no longer be polled.
+                    *self.accum() = None;
+                    return Poll::Ready(Err(e));
+                }
+                None => None,
+            };
+            let accum = self.accum().take().unwrap();
 
             if let Some(e) = item {
                 let future = (self.f())(accum, e);

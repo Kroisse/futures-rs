@@ -3,7 +3,7 @@
 use core::marker::Unpin;
 use core::mem;
 use core::pin::PinMut;
-use futures_core::future::Future;
+use futures_core::future::{FusedFuture, Future};
 use futures_core::task::{self, Poll};
 
 /// A future that may have completed.
@@ -77,6 +77,16 @@ impl<Fut: Future> MaybeDone<Fut> {
             } else {
                 unreachable!()
             }
+        }
+    }
+}
+
+impl<Fut: Future> FusedFuture for MaybeDone<Fut> {
+    fn can_poll(&self) -> bool {
+        match self {
+            MaybeDone::Future(_) => true,
+            MaybeDone::Done(_)
+            | MaybeDone::Gone => false,
         }
     }
 }

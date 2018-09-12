@@ -1,6 +1,6 @@
 use core::marker;
 use core::pin::PinMut;
-use futures_core::future::Future;
+use futures_core::future::{Future, FusedFuture};
 use futures_core::task::{self, Poll};
 
 /// A future which is never resolved.
@@ -31,6 +31,10 @@ pub struct Empty<T> {
 /// ```
 pub fn empty<T>() -> Empty<T> {
     Empty { _data: marker::PhantomData }
+}
+
+impl<T> FusedFuture for Empty<T> {
+    fn can_poll(&self) -> bool { true }
 }
 
 impl<T> Future for Empty<T> {

@@ -1,5 +1,5 @@
 use core::pin::PinMut;
-use futures_core::future::{Future, TryFuture};
+use futures_core::future::{Future, FusedFuture, TryFuture};
 use futures_core::task::{self, Poll};
 use pin_utils::unsafe_pinned;
 
@@ -17,6 +17,10 @@ impl<Fut> IntoFuture<Fut> {
     pub(super) fn new(future: Fut) -> IntoFuture<Fut> {
         IntoFuture { future }
     }
+}
+
+impl<Fut: FusedFuture> FusedFuture for IntoFuture<Fut> {
+    fn can_poll(&self) -> bool { self.future.can_poll() }
 }
 
 impl<Fut: TryFuture> Future for IntoFuture<Fut> {

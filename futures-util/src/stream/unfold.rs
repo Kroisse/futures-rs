@@ -1,7 +1,7 @@
 use core::marker::Unpin;
 use core::pin::PinMut;
 use futures_core::future::Future;
-use futures_core::stream::Stream;
+use futures_core::stream::{FusedStream, Stream};
 use futures_core::task::{self, Poll};
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
@@ -76,6 +76,12 @@ impl<T, F, Fut> Unfold<T, F, Fut> {
     unsafe_unpinned!(f: F);
     unsafe_unpinned!(state: Option<T>);
     unsafe_pinned!(fut: Option<Fut>);
+}
+
+impl<T, F, Fut> FusedStream for Unfold<T, F, Fut> {
+    fn can_poll(&self) -> bool {
+        self.state.is_some() || self.fut.is_some()
+    }
 }
 
 impl<T, F, Fut, It> Stream for Unfold<T, F, Fut>

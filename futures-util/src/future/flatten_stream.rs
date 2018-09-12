@@ -1,7 +1,7 @@
 use core::fmt;
 use core::pin::PinMut;
 use futures_core::future::Future;
-use futures_core::stream::Stream;
+use futures_core::stream::{FusedStream, Stream};
 use futures_core::task::{self, Poll};
 
 /// Future for the `flatten_stream` combinator, flattening a
@@ -38,6 +38,18 @@ enum State<Fut: Future> {
     Future(Fut),
     // future resolved to Stream
     Stream(Fut::Output),
+}
+
+impl<Fut> FusedStream for FlattenStream<Fut>
+    where Fut: Future,
+          Fut::Output: Stream + FusedStream,
+{
+    fn can_poll(&self) -> bool {
+        match &self.state {
+            State::Future(_) => true,
+            State::Stream(stream) => stream.can_poll(),
+        }
+    }
 }
 
 impl<Fut> Stream for FlattenStream<Fut>

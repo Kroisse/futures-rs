@@ -10,9 +10,11 @@
 #![doc(html_root_url = "https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.5/futures_core")]
 
 #[doc(hidden)] pub use crate::future::Future;
+#[doc(hidden)] pub use crate::future::FusedFuture;
 #[doc(hidden)] pub use crate::future::TryFuture;
 
 #[doc(hidden)] pub use crate::stream::Stream;
+#[doc(hidden)] pub use crate::stream::FusedStream;
 #[doc(hidden)] pub use crate::stream::TryStream;
 
 #[doc(hidden)] pub use crate::task::Poll;

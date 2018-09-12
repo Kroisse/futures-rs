@@ -1,13 +1,14 @@
 use core::pin::PinMut;
-use futures_core::future::Future;
+use futures_core::future::{Future, FusedFuture};
 use futures_core::task::{self, Poll};
 use pin_utils::unsafe_pinned;
 
-/// A future which "fuses" a future once it's been resolved.
+/// A future which "fuses" a future once it has been resolved.
 ///
-/// Normally futures can behave unpredictable once they're used after a future
-/// has been resolved, but `Fuse` is always defined to return `Async::Pending`
-/// from `poll` after it has resolved successfully or returned an error.
+/// Normally, `poll`ing a future after it has completed (returned `Poll::Ready`
+/// from a call to `poll`) can cause arbitrary behavior (panics, deadock).
+/// `Fuse` is always defined to return `Poll::Pending` from `poll` after it has
+/// resolved.
 ///
 /// This is created by the `Future::fuse` method.
 #[derive(Debug)]
@@ -23,6 +24,12 @@ impl<Fut: Future> Fuse<Fut> {
         Fuse {
             future: Some(f),
         }
+    }
+}
+
+impl<Fut: Future> FusedFuture for Fuse<Fut> {
+    fn can_poll(&self) -> bool {
+        self.future.is_some()
     }
 }
 

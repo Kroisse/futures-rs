@@ -1,6 +1,6 @@
 use core::marker::Unpin;
 use core::pin::PinMut;
-use futures_core::future::Future;
+use futures_core::future::{FusedFuture, Future};
 use futures_core::task::{self, Poll, Spawn};
 
 /// Future for the `with_spawner` combinator, assigning a [`Spawn`]
@@ -21,6 +21,12 @@ impl<Fut: Future, Sp: Spawn> WithSpawner<Fut, Sp> {
 }
 
 impl<Fut: Future + Unpin, Sp: Spawn> Unpin for WithSpawner<Fut, Sp> {}
+
+impl<Fut: Future + FusedFuture, Sp: Spawn> FusedFuture for WithSpawner<Fut, Sp> {
+    fn can_poll(&self) -> bool {
+        self.future.can_poll()
+    }
+}
 
 impl<Fut, Sp> Future for WithSpawner<Fut, Sp>
     where Fut: Future,

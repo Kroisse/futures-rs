@@ -1,7 +1,7 @@
 use crate::stream::{StreamExt, Fuse};
 use core::marker::Unpin;
 use core::pin::PinMut;
-use futures_core::stream::Stream;
+use futures_core::stream::{FusedStream, Stream};
 use futures_core::task::{self, Poll};
 
 /// An adapter for merging the output of two streams.
@@ -33,6 +33,12 @@ impl<St1, St2> Select<St1, St2>
             stream2: stream2.fuse(),
             flag: false,
         }
+    }
+}
+
+impl<St1, St2> FusedStream for Select<St1, St2> {
+    fn can_poll(&self) -> bool {
+        self.stream1.can_poll() || self.stream2.can_poll()
     }
 }
 

@@ -1,6 +1,6 @@
 use super::Chain;
 use core::pin::PinMut;
-use futures_core::future::Future;
+use futures_core::future::{FusedFuture, Future};
 use futures_core::task::{self, Poll};
 use pin_utils::unsafe_pinned;
 
@@ -26,6 +26,10 @@ impl<Fut1, Fut2, F> Then<Fut1, Fut2, F>
             chain: Chain::new(future, f),
         }
     }
+}
+
+impl<Fut1, Fut2, F> FusedFuture for Then<Fut1, Fut2, F> {
+    fn can_poll(&self) -> bool { self.chain.can_poll() }
 }
 
 impl<Fut1, Fut2, F> Future for Then<Fut1, Fut2, F>

@@ -1,6 +1,6 @@
 use core::marker::Unpin;
 use core::pin::PinMut;
-use futures_core::stream::Stream;
+use futures_core::stream::{FusedStream, Stream};
 use futures_core::task::{self, Poll};
 use futures_sink::Sink;
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
@@ -67,6 +67,12 @@ impl<St: Stream> Fuse<St> {
     /// care should be taken to avoid losing resources when this is called.
     pub fn into_inner(self) -> St {
         self.stream
+    }
+}
+
+impl<S> FusedStream for Fuse<S> {
+    fn can_poll(&self) -> bool {
+        !self.done
     }
 }
 

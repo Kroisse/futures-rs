@@ -1,7 +1,7 @@
 use core::marker::Unpin;
 use core::pin::PinMut;
 use futures_core::future::Future;
-use futures_core::stream::Stream;
+use futures_core::stream::{FusedStream, Stream};
 use futures_core::task::{self, Poll};
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
@@ -70,6 +70,16 @@ impl<St, Fut, F> Unpin for Filter<St, Fut, F>
           F: FnMut(&St::Item) -> Fut,
           Fut: Future<Output = bool> + Unpin,
 {}
+
+impl<St, Fut, F> FusedStream for Filter<St, Fut, F>
+where St: Stream + FusedStream,
+      F: FnMut(&St::Item) -> Fut,
+      Fut: Future<Output = bool>,
+{
+    fn can_poll(&self) -> bool {
+        self.pending_fut.is_some() || self.stream.can_poll()
+    }
+}
 
 impl<St, Fut, F> Stream for Filter<St, Fut, F>
     where St: Stream,

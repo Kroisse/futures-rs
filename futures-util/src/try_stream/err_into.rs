@@ -1,6 +1,6 @@
 use core::marker::{PhantomData, Unpin};
 use core::pin::PinMut;
-use futures_core::stream::{Stream, TryStream};
+use futures_core::stream::{FusedStream, Stream, TryStream};
 use futures_core::task::{self, Poll};
 use pin_utils::unsafe_pinned;
 
@@ -19,6 +19,12 @@ impl<St, E> ErrInto<St, E> {
 
     pub(super) fn new(stream: St) -> Self {
         ErrInto { stream, _marker: PhantomData }
+    }
+}
+
+impl<St: FusedStream, E> FusedStream for ErrInto<St, E> {
+    fn can_poll(&self) -> bool {
+        self.stream.can_poll()
     }
 }
 

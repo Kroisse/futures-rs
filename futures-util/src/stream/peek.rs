@@ -1,7 +1,7 @@
 use crate::stream::{StreamExt, Fuse};
 use core::marker::Unpin;
 use core::pin::PinMut;
-use futures_core::stream::Stream;
+use futures_core::stream::{FusedStream, Stream};
 use futures_core::task::{self, Poll};
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
@@ -48,6 +48,12 @@ impl<St: Stream> Peekable<St> {
                 Poll::Ready(self.peeked().as_ref())
             }
         }
+    }
+}
+
+impl<St: Stream> FusedStream for Peekable<St> {
+    fn can_poll(&self) -> bool {
+        self.peeked.is_some() || self.stream.can_poll()
     }
 }
 

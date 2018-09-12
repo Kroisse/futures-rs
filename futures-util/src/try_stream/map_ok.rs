@@ -1,6 +1,6 @@
 use core::marker::Unpin;
 use core::pin::PinMut;
-use futures_core::stream::{Stream, TryStream};
+use futures_core::stream::{FusedStream, Stream, TryStream};
 use futures_core::task::{self, Poll};
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
@@ -23,6 +23,12 @@ impl<St, F> MapOk<St, F> {
 }
 
 impl<St: Unpin, F> Unpin for MapOk<St, F> {}
+
+impl<St: FusedStream, F> FusedStream for MapOk<St, F> {
+    fn can_poll(&self) -> bool {
+        self.stream.can_poll()
+    }
+}
 
 impl<St, F, T> Stream for MapOk<St, F>
 where

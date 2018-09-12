@@ -1,16 +1,15 @@
 use crate::stream::{StreamExt, Fuse};
 use core::marker::Unpin;
 use core::pin::PinMut;
-use futures_core::stream::Stream;
+use futures_core::stream::{FusedStream, Stream};
 use futures_core::task::{self, Poll};
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 
 /// An adapter for merging the output of two streams.
 ///
 /// The merged stream produces items from one or both of the underlying
-/// streams as they become available. Errors, however, are not merged: you
+/// streams as they become available.
 #[derive(Debug)]
-/// get at most one error at a time.
 #[must_use = "streams do nothing unless polled"]
 pub struct Zip<St1: Stream, St2: Stream> {
     stream1: Fuse<St1>,
@@ -37,6 +36,14 @@ impl<St1: Stream, St2: Stream> Zip<St1, St2> {
     }
 }
 
+impl<St1, St2> FusedStream for Zip<St1, St2>
+    where St1: Stream, St2: Stream,
+{
+    fn can_poll(&self) -> bool {
+        self.stream1.can_poll() && self.stream2.can_poll()
+    }
+}
+
 impl<St1, St2> Stream for Zip<St1, St2>
     where St1: Stream, St2: Stream
 {
@@ -49,13 +56,16 @@ impl<St1, St2> Stream for Zip<St1, St2>
         if self.queued1().is_none() {
             match self.stream1().poll_next(cx) {
                 Poll::Ready(Some(item1)) => *self.queued1() = Some(item1),
-                Poll::Ready(None) | Poll::Pending => {}
+                Poll::Ready(None) => return Poll::Ready(None),
+                Poll::Pending => {}
             }
         }
+
         if self.queued2().is_none() {
             match self.stream2().poll_next(cx) {
                 Poll::Ready(Some(item2)) => *self.queued2() = Some(item2),
-                Poll::Ready(None) | Poll::Pending => {}
+                Poll::Ready(None) => return Poll::Ready(None),
+                Poll::Pending => {}
             }
         }
 
@@ -63,8 +73,6 @@ impl<St1, St2> Stream for Zip<St1, St2>
             let pair = (self.queued1().take().unwrap(),
                         self.queued2().take().unwrap());
             Poll::Ready(Some(pair))
-        } else if self.stream1().is_done() || self.stream2().is_done() {
-            Poll::Ready(None)
         } else {
             Poll::Pending
         }
